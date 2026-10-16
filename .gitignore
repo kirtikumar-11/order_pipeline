@@ -1,0 +1,10 @@
+.env
+certs/*.pem
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+.databricks/
+spark-warehouse/
+metastore_db/

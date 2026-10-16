@@ -1,0 +1,6 @@
+# Local testing only (Databricks already has Spark and Delta). Needs Java 17+.
+pyspark==4.0.1
+delta-spark==4.0.0
+confluent-kafka>=2.4
+python-dotenv>=1.0
+pytest>=8

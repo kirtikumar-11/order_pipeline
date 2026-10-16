@@ -1,0 +1,27 @@
+# Databricks Asset Bundle: deploys the notebooks + a scheduled job with one command.
+#   cd databricks
+#   databricks auth login --host https://<your-workspace>.cloud.databricks.com
+#   databricks bundle validate
+#   databricks bundle deploy
+#   databricks bundle run order_pipeline
+bundle:
+  name: order_pipeline
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for the tables
+    default: workspace
+  schema:
+    description: Schema (database) for the tables and the checkpoint volume
+    default: orders_pipeline
+  secret_scope:
+    description: Secret scope holding the Kafka credentials
+    default: order-pipeline
+
+targets:
+  dev:
+    mode: development   # prefixes resource names with [dev <you>] and pauses schedules
+    default: true
