@@ -8,3 +8,6 @@ venv/
 .databricks/
 spark-warehouse/
 metastore_db/
+README (2).md 
+README (3).md
+WALKTHROUGH.md
