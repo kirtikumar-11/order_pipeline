@@ -58,6 +58,7 @@ def build_config() -> dict:
         "linger.ms": 20,
         "compression.type": "lz4",
         "client.id": "order-producer",
+        "broker.address.family": os.getenv("KAFKA_ADDRESS_FAMILY", "any"),
     }
     if protocol.endswith("SSL"):
         ca = os.getenv("KAFKA_CA_LOCATION", "certs/ca.pem")
