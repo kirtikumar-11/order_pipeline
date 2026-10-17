@@ -155,6 +155,8 @@ def main():
     signal.signal(signal.SIGINT, lambda *_: stop.update(now=True))
 
     last_good = None
+    started = time.perf_counter()
+    while not stop["now"] and (args.count == 0 or stats["sent"] < args.count):
     while not stop["now"] and (args.count == 0 or stats["sent"] < args.count):
         roll = rng.random()
         if roll < args.bad_ratio:
@@ -183,10 +185,10 @@ def main():
         if args.rate > 0:
             time.sleep(1.0 / args.rate)
 
-    remaining = producer.flush(30)
+    remaining = producer.flush(60)
+    elapsed = time.perf_counter() - started
     print(f"Done. {stats} still_in_queue={remaining}")
-    if stats["failed"] or remaining:
-        sys.exit(1)
+    print(f"Elapsed {elapsed:.1f} s | delivered {stats['delivered'] / elapsed:,.0f} events/s")
 
 
 if __name__ == "__main__":

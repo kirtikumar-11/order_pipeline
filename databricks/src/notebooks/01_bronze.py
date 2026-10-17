@@ -21,7 +21,9 @@ kafka_opts = kafka_options_from_secrets(dbutils, s)
 
 query = start_bronze(spark, kafka_opts, s["bronze_table"], s["bronze_checkpoint"], s["trigger"])
 query.awaitTermination()  # with available_now this returns once all current data is written
-print(query.lastProgress)
+from order_pipeline.metrics import throughput_summary
+
+throughput_summary(query)
 
 # COMMAND ----------
 
