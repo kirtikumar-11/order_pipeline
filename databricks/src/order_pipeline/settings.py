@@ -11,7 +11,7 @@ WIDGET_DEFAULTS = {
     "trigger": "available_now",      # or e.g. "30 seconds" on compute that allows always-on streams
     "ca_volume_path": "",            # optional: /Volumes/<catalog>/<schema>/config/ca.pem instead of a secret
     "starting_offsets": "earliest",
-    "max_offsets_per_trigger": "10000",
+    "max_offsets_per_trigger": "100000",
 }
 
 
