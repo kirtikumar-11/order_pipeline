@@ -14,6 +14,7 @@ sys.path.append(os.path.abspath(".."))
 from order_pipeline.settings import kafka_options_from_secrets, read_settings
 from order_pipeline.transforms import start_bronze
 
+
 s = read_settings(dbutils)
 kafka_opts = kafka_options_from_secrets(dbutils, s)
 

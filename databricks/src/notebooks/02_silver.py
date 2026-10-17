@@ -20,12 +20,23 @@ s = read_settings(dbutils)
 
 # COMMAND ----------
 
+import time
+
+from order_pipeline.metrics import rows_written_since, throughput_summary
+
+started = time.time()
 query = start_silver(spark, s["bronze_table"], s["silver_table"], s["quarantine_table"],
                      s["silver_checkpoint"], s["trigger"])
 query.awaitTermination()
-from order_pipeline.metrics import throughput_summary
+wall_seconds = time.time() - started
 
-throughput_summary(query)
+summary = throughput_summary(query)
+if summary["rows"] == 0:  # serverless reports 0 input rows for foreachBatch, so count from Delta history
+    rows = (rows_written_since(spark, s["silver_table"], started)
+            + rows_written_since(spark, s["quarantine_table"], started))
+    summary = {"rows_written": rows, "wall_seconds": round(wall_seconds, 1),
+               "rows_per_second": round(rows / wall_seconds, 1) if wall_seconds else 0.0}
+summary
 
 # COMMAND ----------
 

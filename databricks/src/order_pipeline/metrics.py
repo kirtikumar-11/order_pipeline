@@ -22,3 +22,20 @@ def throughput_summary(query) -> dict:
         "rows_per_second": round(rows / (busy_ms / 1000), 1) if busy_ms else 0.0,
         "largest_batch_rows": max((_field(p, "numInputRows") for p in batches), default=0),
     }
+
+def rows_written_since(spark, table: str, since_epoch: float) -> int:
+    """Rows inserted into a Delta table by commits made since since_epoch (from DESCRIBE HISTORY).
+
+    Used for foreachBatch queries on serverless, whose streaming progress reports 0 input rows."""
+    from pyspark.sql import functions as F
+
+    metrics = F.col("operationMetrics")
+    total = (
+        spark.sql(f"DESCRIBE HISTORY {table}")
+        .where(F.col("timestamp").cast("double") >= since_epoch - 1)  # history keeps whole seconds
+        .where(F.col("operation").isin("MERGE", "WRITE"))
+        .select(F.coalesce(metrics["numTargetRowsInserted"], metrics["numOutputRows"]).cast("long").alias("n"))
+        .agg(F.sum("n"))
+        .first()[0]
+    )
+    return int(total or 0)
