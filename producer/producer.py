@@ -157,7 +157,6 @@ def main():
     last_good = None
     started = time.perf_counter()
     while not stop["now"] and (args.count == 0 or stats["sent"] < args.count):
-    while not stop["now"] and (args.count == 0 or stats["sent"] < args.count):
         roll = rng.random()
         if roll < args.bad_ratio:
             key, value = b"bad", make_bad_message(rng)
