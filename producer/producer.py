@@ -38,7 +38,7 @@ NEXT_STATUS = {"CREATED": "PAID", "PAID": "SHIPPED"}
 
 def build_config() -> dict:
     """Read Kafka settings from the environment (.env). Fails fast if something is missing."""
-    load_dotenv(find_dotenv(usecwd=True))  # .env in the folder you run from (or a parent)
+    load_dotenv(find_dotenv(usecwd=True))  
     required = ["KAFKA_BOOTSTRAP_SERVERS", "KAFKA_USERNAME", "KAFKA_PASSWORD"]
     missing = [name for name in required if not os.getenv(name)]
     if missing:
@@ -51,10 +51,10 @@ def build_config() -> dict:
         "sasl.mechanism": os.getenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256"),
         "sasl.username": os.environ["KAFKA_USERNAME"],
         "sasl.password": os.environ["KAFKA_PASSWORD"],
-        # Reliability: wait for all in-sync replicas, and let the broker drop producer retries.
+        
         "acks": "all",
         "enable.idempotence": True,
-        # Throughput: wait up to 20 ms to batch messages together, then compress the batch.
+        
         "linger.ms": 20,
         "compression.type": "lz4",
         "client.id": "order-producer",
@@ -74,7 +74,7 @@ class OrderSimulator:
     def __init__(self, seed=None, start_order_id=None):
         self.rng = random.Random(seed)
         self.next_order_id = start_order_id or int(time.time() * 1000) % 10_000_000_000
-        self.open_orders = {}  # order_id -> (customer_id, product, amount, status)
+        self.open_orders = {}  
 
     def next_event(self, now=None) -> dict:
         now = time.time() if now is None else now
@@ -86,7 +86,7 @@ class OrderSimulator:
             if status in NEXT_STATUS and self.rng.random() > 0.1:
                 self.open_orders[order_id] = (customer_id, product, amount, status)
             else:
-                del self.open_orders[order_id]  # shipped, or abandoned after payment
+                del self.open_orders[order_id]  
         else:
             order_id = self.next_order_id
             self.next_order_id += 1
@@ -95,7 +95,7 @@ class OrderSimulator:
             low, high = PRODUCTS[product]
             amount = round(self.rng.uniform(low, high), 2)
             status = "CREATED"
-            if self.rng.random() > 0.15:  # 15% of carts are abandoned and never paid
+            if self.rng.random() > 0.15:  
                 self.open_orders[order_id] = (customer_id, product, amount, status)
 
         return {
@@ -115,7 +115,7 @@ def make_bad_message(rng: random.Random) -> bytes:
     base = {"event_id": str(uuid.uuid4()), "order_id": rng.randint(1, 10**6), "customer_id": 1,
             "product": "Mouse", "amount": 999.0, "status": "PAID", "timestamp": time.time()}
     if kind == "not_json":
-        return b'{"order_id": 12, "amount": 10.0, '  # truncated JSON
+        return b'{"order_id": 12, "amount": 10.0, '  
     if kind == "missing_order_id":
         base.pop("order_id")
     elif kind == "negative_amount":
@@ -144,7 +144,7 @@ def main():
     stats = {"sent": 0, "delivered": 0, "failed": 0, "dups": 0, "bad": 0, "late": 0}
 
     def on_delivery(err, msg):
-        # Called from producer.poll()/flush() once the broker answers (or retries give up).
+        
         if err is not None:
             stats["failed"] += 1
             print(f"DELIVERY FAILED key={msg.key()}: {err}", file=sys.stderr)
@@ -162,14 +162,14 @@ def main():
             key, value = b"bad", make_bad_message(rng)
             stats["bad"] += 1
         elif roll < args.bad_ratio + args.dup_ratio and last_good is not None:
-            key, value = last_good  # exact same bytes, same event_id
+            key, value = last_good  
             stats["dups"] += 1
         else:
             event = sim.next_event()
             if rng.random() < args.late_ratio:
                 event["timestamp"] = round(event["timestamp"] - 7200, 3)
                 stats["late"] += 1
-            # Key = customer_id: all events of one customer land on the same partition, in order.
+            
             key, value = str(event["customer_id"]).encode(), json.dumps(event).encode()
             last_good = (key, value)
 
@@ -178,9 +178,9 @@ def main():
                 producer.produce(topic, key=key, value=value, on_delivery=on_delivery)
                 break
             except BufferError:
-                producer.poll(0.5)  # local queue full: let it drain, then try again
+                producer.poll(0.5)  
         stats["sent"] += 1
-        producer.poll(0)  # serve delivery callbacks without blocking
+        producer.poll(0)  
         if args.rate > 0:
             time.sleep(1.0 / args.rate)
 

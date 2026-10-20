@@ -2,13 +2,9 @@ resources:
   jobs:
     order_pipeline:
       name: order_pipeline
-      max_concurrent_runs: 1        # two runs must never share a checkpoint at the same time
-      schedule:
-        quartz_cron_expression: "0 0/15 * * * ?"   # every 15 minutes
-        timezone_id: UTC
-        pause_status: PAUSED        # unpause in the Jobs UI when you are ready
-      parameters:                   # passed to every notebook's widgets with the same name
-        - name: catalog
+      max_concurrent_runs: 1              schedule:
+        quartz_cron_expression: "0 0/15 * * * ?"           timezone_id: UTC
+        pause_status: PAUSED              parameters:                           - name: catalog
           default: ${var.catalog}
         - name: schema
           default: ${var.schema}
@@ -16,8 +12,7 @@ resources:
           default: ${var.secret_scope}
         - name: trigger
           default: available_now
-      # No cluster settings = serverless compute (Free Edition / serverless workspaces).
-      tasks:
+            tasks:
         - task_key: bronze
           notebook_task:
             notebook_path: ../src/notebooks/01_bronze.py
@@ -37,5 +32,4 @@ resources:
           depends_on: [{task_key: gold}]
           notebook_task:
             notebook_path: ../src/notebooks/04_validate.py
-      # email_notifications:
-      #   on_failure: [you@example.com]
+            

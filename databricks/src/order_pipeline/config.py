@@ -1,7 +1,7 @@
 """Builds Spark Kafka source options. Secrets are passed in; nothing is hardcoded here."""
 
-# Databricks ships a "shaded" (renamed) copy of the Kafka client, so the JAAS login class
-# has a "kafkashaded." prefix there. Open-source Spark uses the normal class name.
+
+
 SHADED_SCRAM = "kafkashaded.org.apache.kafka.common.security.scram.ScramLoginModule"
 PLAIN_SCRAM = "org.apache.kafka.common.security.scram.ScramLoginModule"
 
@@ -29,9 +29,9 @@ def kafka_options(
     opts = {
         "kafka.bootstrap.servers": bootstrap_servers,
         "subscribe": topic,
-        "startingOffsets": starting_offsets,  # only used the very first time (no checkpoint yet)
-        "maxOffsetsPerTrigger": str(max_offsets_per_trigger),  # caps batch size, also with AvailableNow
-        "failOnDataLoss": "true",  # fail loudly if Kafka deleted data we never read
+        "startingOffsets": starting_offsets,  
+        "maxOffsetsPerTrigger": str(max_offsets_per_trigger),  
+        "failOnDataLoss": "true",  
         "kafka.security.protocol": security_protocol,
         "kafka.sasl.mechanism": sasl_mechanism,
         "kafka.sasl.jaas.config": f'{login_module} required username="{username}" password="{password}";',

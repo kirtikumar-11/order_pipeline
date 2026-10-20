@@ -4,12 +4,12 @@ Only used inside Databricks (it needs dbutils)."""
 from order_pipeline.config import kafka_options
 
 WIDGET_DEFAULTS = {
-    "catalog": "workspace",          # Free Edition's default catalog. Use "main" or your own elsewhere.
+    "catalog": "workspace",          
     "schema": "orders_pipeline",
     "secret_scope": "order-pipeline",
     "topic": "orders",
-    "trigger": "available_now",      # or e.g. "30 seconds" on compute that allows always-on streams
-    "ca_volume_path": "",            # optional: /Volumes/<catalog>/<schema>/config/ca.pem instead of a secret
+    "trigger": "available_now",      
+    "ca_volume_path": "",            
     "starting_offsets": "earliest",
     "max_offsets_per_trigger": "100000",
 }
@@ -17,7 +17,7 @@ WIDGET_DEFAULTS = {
 
 def read_settings(dbutils) -> dict:
     for name, default in WIDGET_DEFAULTS.items():
-        dbutils.widgets.text(name, default)  # job parameters with the same name override these
+        dbutils.widgets.text(name, default)  
     s = {name: dbutils.widgets.get(name).strip() for name in WIDGET_DEFAULTS}
     base = f"{s['catalog']}.{s['schema']}"
     volume = f"/Volumes/{s['catalog']}/{s['schema']}/checkpoints"

@@ -10,7 +10,7 @@ from order_pipeline.transforms import (
     split_good_bad,
 )
 
-T0 = 1790664086.0  # some fixed epoch second
+T0 = 1790664086.0  
 
 
 def event(event_id, order_id, status, amount=100.0, ts=T0, product="Keyboard", customer_id=7):
@@ -31,19 +31,19 @@ def test_good_rows_are_parsed_and_typed(spark):
     row = good.collect()[0]
     assert bad.count() == 0
     assert row.status == "PAID" and row.product == "Keyboard"
-    assert str(row.amount) == "84508.36"  # decimal(12,2)
+    assert str(row.amount) == "84508.36"  
     assert row.event_ts.year == 2026
 
 
 def test_malformed_rows_go_to_quarantine_with_reasons(spark):
     values = [
-        '{"order_id": 12, "amount": 10.0, ',                       # truncated JSON
+        '{"order_id": 12, "amount": 10.0, ',                       
         json.dumps({"event_id": "x", "customer_id": 1, "product": "Mouse", "amount": 5.0,
-                    "status": "PAID", "timestamp": T0}),            # no order_id
+                    "status": "PAID", "timestamp": T0}),            
         event("e2", 2, "PAID", amount=-50.0),
         event("e3", 3, "TELEPORTED"),
         json.dumps({"event_id": "e4", "order_id": 4, "product": "Mouse", "amount": "nine hundred",
-                    "status": "PAID", "timestamp": T0}),            # wrong type
+                    "status": "PAID", "timestamp": T0}),            
     ]
     good, bad = split_good_bad(bronze(spark, values))
     assert good.count() == 0
@@ -67,19 +67,19 @@ def test_silver_writer_is_idempotent_across_batches_and_retries(spark):
     batch = bronze(spark, [event("e1", 1, "CREATED"), event("e2", 1, "PAID"), "not json"])
 
     write(batch, 0)
-    write(batch, 0)  # Spark retried the same batch after a failure
-    write(bronze(spark, [event("e1", 1, "CREATED"), event("e3", 2, "CREATED")]), 1)  # replayed e1
-    write(batch, 2)  # whole batch replayed from Kafka after a lost checkpoint
+    write(batch, 0)  
+    write(bronze(spark, [event("e1", 1, "CREATED"), event("e3", 2, "CREATED")]), 1)  
+    write(batch, 2)  
 
     assert spark.read.table(silver).count() == 3
-    assert spark.read.table(quarantine).count() == 1  # not doubled by the retry
+    assert spark.read.table(quarantine).count() == 1  
 
 
 def test_current_status_ignores_late_lower_status(spark):
     values = [
         event("a", 1, "CREATED", ts=T0),
         event("b", 1, "SHIPPED", ts=T0 + 60),
-        event("c", 1, "PAID", ts=T0 + 120),  # arrives late with a later clock, must not win
+        event("c", 1, "PAID", ts=T0 + 120),  
         event("d", 2, "CREATED", ts=T0, product="Mouse"),
     ]
     good, _ = split_good_bad(bronze(spark, values))
@@ -92,7 +92,7 @@ def test_revenue_counts_each_paid_order_once(spark):
         event("a", 1, "CREATED", amount=100.0),
         event("b", 1, "PAID", amount=100.0),
         event("c", 1, "SHIPPED", amount=100.0),
-        event("d", 2, "CREATED", amount=50.0),  # never paid: no revenue
+        event("d", 2, "CREATED", amount=50.0),  
     ]
     good, _ = split_good_bad(bronze(spark, values))
     rows = revenue_by_product(orders_current(good)).collect()

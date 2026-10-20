@@ -6,8 +6,8 @@ from pyspark.sql.types import DoubleType, LongType, StringType, StructField, Str
 
 from order_pipeline.config import apply_trigger
 
-# The contract with the producer. Parsing with an explicit schema (not schema inference)
-# means a surprise field type can't silently change the table.
+
+
 ORDER_SCHEMA = StructType([
     StructField("event_id", StringType()),
     StructField("order_id", LongType()),
@@ -15,15 +15,15 @@ ORDER_SCHEMA = StructType([
     StructField("product", StringType()),
     StructField("amount", DoubleType()),
     StructField("status", StringType()),
-    StructField("timestamp", DoubleType()),  # epoch seconds from Python time.time()
+    StructField("timestamp", DoubleType()),  
 ])
 VALID_STATUSES = ["CREATED", "PAID", "SHIPPED"]
-# Lifecycle order. Used to pick an order's current status even if events arrive out of order.
+
 def status_rank():
     return F.when(F.col("status") == "SHIPPED", 3).when(F.col("status") == "PAID", 2).otherwise(1)
 
 
-# ---------------------------------------------------------------- Bronze
+
 def bronze_from_kafka(kafka_df: DataFrame) -> DataFrame:
     """Keep the raw payload exactly as received, plus Kafka metadata for traceability.
     No parsing here: if the parser has a bug, Bronze still has the original bytes to replay.
@@ -51,13 +51,13 @@ def start_bronze(spark: SparkSession, kafka_opts: dict, bronze_table: str, check
     return apply_trigger(writer, trigger).toTable(bronze_table)
 
 
-# ---------------------------------------------------------------- Silver
+
 def parse_and_validate(bronze_df: DataFrame) -> DataFrame:
     """Parse JSON with the explicit schema and attach a list of data-quality errors per row.
     Rows with an empty dq_errors list are good; the rest go to quarantine.
     """
     parsed = bronze_df.withColumn("o", F.from_json("raw_value", ORDER_SCHEMA))
-    o = lambda name: F.col("o." + name)  # noqa: E731
+    o = lambda name: F.col("o." + name)  
     checks = F.array(
         F.when(F.col("o").isNull() | o("order_id").isNull() & o("event_id").isNull() & o("status").isNull(),
                F.lit("unparseable_json")),
@@ -68,8 +68,8 @@ def parse_and_validate(bronze_df: DataFrame) -> DataFrame:
         F.when(~F.coalesce(F.upper(F.trim(o("status"))).isin(VALID_STATUSES), F.lit(False)), F.lit("invalid_status")),
     )
     return parsed.select(
-        # event_id from the producer is the dedup key. Older events without it fall back to a
-        # hash of the fields that identify one state change of one order.
+        
+        
         F.coalesce(
             o("event_id"),
             F.sha2(F.concat_ws("|", o("order_id"), o("status"), o("timestamp")), 256),
@@ -78,7 +78,7 @@ def parse_and_validate(bronze_df: DataFrame) -> DataFrame:
         o("order_id").alias("order_id"),
         o("customer_id").alias("customer_id"),
         F.initcap(F.trim(o("product"))).alias("product"),
-        o("amount").cast("decimal(12,2)").alias("amount"),  # money as decimal, never float
+        o("amount").cast("decimal(12,2)").alias("amount"),  
         F.upper(F.trim(o("status"))).alias("status"),
         F.timestamp_seconds(o("timestamp")).alias("event_ts"),
         F.to_date(F.timestamp_seconds(o("timestamp"))).alias("event_date"),
@@ -96,7 +96,7 @@ QUARANTINE_COLUMNS = ["raw_value", "dq_errors", "kafka_key", "topic", "partition
 def split_good_bad(bronze_df: DataFrame):
     checked = parse_and_validate(bronze_df)
     good = checked.filter(F.size("dq_errors") == 0)
-    # Same event twice in one batch: keep the copy Kafka received first.
+    
     w = Window.partitionBy("event_key").orderBy("kafka_timestamp", "partition", "offset")
     good = good.withColumn("_rn", F.row_number().over(w)).filter("_rn = 1").select(*SILVER_COLUMNS)
     bad = checked.filter(F.size("dq_errors") > 0).select(*QUARANTINE_COLUMNS)
@@ -145,7 +145,7 @@ def start_silver(spark: SparkSession, bronze_table: str, silver_table: str, quar
                  checkpoint: str, trigger: str):
     ensure_silver_tables(spark, silver_table, quarantine_table)
     writer = (
-        spark.readStream.table(bronze_table)  # Delta table as a streaming source: reads only new rows
+        spark.readStream.table(bronze_table)  
         .writeStream
         .foreachBatch(make_silver_batch_writer(silver_table, quarantine_table))
         .option("checkpointLocation", checkpoint)
@@ -154,7 +154,7 @@ def start_silver(spark: SparkSession, bronze_table: str, silver_table: str, quar
     return apply_trigger(writer, trigger).start()
 
 
-# ---------------------------------------------------------------- Gold
+
 def orders_current(silver_df: DataFrame) -> DataFrame:
     """One row per order with its furthest lifecycle status. Ranking by lifecycle first means a
     late-arriving PAID event can't move an order back from SHIPPED."""

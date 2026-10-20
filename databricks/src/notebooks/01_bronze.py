@@ -1,10 +1,10 @@
-# Databricks notebook source
-# MAGIC %md
-# MAGIC # 01 · Bronze: Kafka → Delta (raw)
-# MAGIC Stores every Kafka record **as received** (raw JSON text + topic/partition/offset/timestamp).
-# MAGIC The checkpoint remembers the last offset per partition, so each run continues where the last stopped.
 
-# COMMAND ----------
+
+
+
+
+
+
 
 import os
 import sys
@@ -18,15 +18,15 @@ from order_pipeline.transforms import start_bronze
 s = read_settings(dbutils)
 kafka_opts = kafka_options_from_secrets(dbutils, s)
 
-# COMMAND ----------
+
 
 query = start_bronze(spark, kafka_opts, s["bronze_table"], s["bronze_checkpoint"], s["trigger"])
-query.awaitTermination()  # with available_now this returns once all current data is written
+query.awaitTermination()  
 from order_pipeline.metrics import throughput_summary
 
 throughput_summary(query)
 
-# COMMAND ----------
+
 
 display(spark.sql(f"""
   SELECT partition, count(*) AS records, min(offset) AS min_offset, max(offset) AS max_offset

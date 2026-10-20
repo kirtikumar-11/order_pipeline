@@ -5,7 +5,7 @@ from pyspark.sql import SparkSession
 
 def validate(spark: SparkSession, bronze: str, silver: str, quarantine: str, gold_prefix: str,
              max_bad_ratio: float = 0.10):
-    q = lambda sql: spark.sql(sql).collect()[0][0]  # noqa: E731
+    q = lambda sql: spark.sql(sql).collect()[0][0]  
     offsets = "count(DISTINCT topic, partition, offset)"
 
     bronze_rows = q(f"SELECT count(*) FROM {bronze}")
@@ -20,13 +20,13 @@ def validate(spark: SparkSession, bronze: str, silver: str, quarantine: str, gol
 
     report = {
         "bronze_rows": bronze_rows,
-        # > 0 is allowed: a lost Bronze checkpoint replays Kafka. Silver absorbs it.
+        
         "bronze_duplicate_offsets": bronze_rows - bronze_offsets,
         "silver_rows": silver_rows,
         "silver_duplicate_event_keys": silver_rows - silver_keys,
         "quarantine_rows": quarantine_rows,
         "quarantine_duplicate_offsets": quarantine_rows - quarantine_offsets,
-        # Records that are neither in Silver nor quarantine = duplicate events removed by the MERGE.
+        
         "duplicates_removed": bronze_offsets - silver_offsets - quarantine_offsets,
         "gold_orders": gold_orders,
         "silver_orders": silver_orders,
